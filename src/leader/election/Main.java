@@ -4,7 +4,8 @@ import leader.election.process.ProcessManager;
 
 public class Main {
     public static void main(String[] args) {
-        ProcessManager pm = new ProcessManager();
+        final ProcessManager pm = new ProcessManager();
         pm.createProcess();
+        pm.inactiveProcess();
     }
 }
