@@ -7,5 +7,6 @@ public class Main {
         final ProcessManager pm = new ProcessManager();
         pm.createProcess();
         pm.inactiveProcess();
+        pm.inactiveCoordinator();
     }
 }

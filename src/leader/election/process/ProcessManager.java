@@ -7,7 +7,8 @@ import java.util.Random;
 public class ProcessManager {
     private static int currentPid = 0;
     private static final int CREATE_INTERVAL = 3000;
-    private static final int INACTIVE_INTERVAL = 5000;
+    private static final int INACTIVE_INTERVAL = 8000;
+    private static final int INACTIVE_COORDINATOR_INTERVAL = 10000;
 
     public static final List<Process> activeProcesses =  new ArrayList<>();
 
@@ -18,11 +19,14 @@ public class ProcessManager {
         new Thread(() -> {
             while (true) {
                 synchronized (lock) {
-                    if (activeProcesses.isEmpty())
+                    if (activeProcesses.isEmpty()) {
                         activeProcesses.add(new Process(++currentPid, true));
-                    else
+                        System.out.printf("Processo " + currentPid + " (Coordernador) criado\n");
+                    }
+                    else {
                         activeProcesses.add(new Process(++currentPid));
-                    System.out.printf("Processo " + currentPid + " criado\n");
+                        System.out.printf("Processo " + currentPid + " criado\n");
+                    }
                 }
 
                 try {
@@ -50,6 +54,29 @@ public class ProcessManager {
                             activeProcesses.remove(process);
                             System.out.println("Process " + process.getPid() + " inativado");
                         }
+                    }
+                }
+            }
+        }).start();
+    }
+
+    public void inactiveCoordinator() {
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(INACTIVE_COORDINATOR_INTERVAL);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                synchronized (lock) {
+                    var coordinators = activeProcesses.stream()
+                            .filter(Process::isCoordinator)
+                            .toList();
+                    if (!coordinators.isEmpty()) {
+                        final Process coordinator = coordinators.getFirst();
+                        activeProcesses.remove(coordinator);
+                        System.out.println(coordinator + " inativado");
                     }
                 }
             }
