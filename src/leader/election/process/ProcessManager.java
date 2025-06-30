@@ -1,12 +1,13 @@
 package leader.election.process;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import leader.election.ring.RingElection;
+
+import java.util.*;
 
 public class ProcessManager {
     private static int currentPid = 0;
     private static final int CREATE_INTERVAL = 3000;
+    private static final int REQUEST_INTERVAL = 2500;
     private static final int INACTIVE_INTERVAL = 8000;
     private static final int INACTIVE_COORDINATOR_INTERVAL = 10000;
 
@@ -21,19 +22,17 @@ public class ProcessManager {
                 synchronized (lock) {
                     if (activeProcesses.isEmpty()) {
                         activeProcesses.add(new Process(++currentPid, true));
-                        System.out.printf("Processo " + currentPid + " (Coordernador) criado\n");
+                        System.out.printf("Processo %d (Coordernador) criado %n".formatted(currentPid));
                     }
                     else {
                         activeProcesses.add(new Process(++currentPid));
-                        System.out.printf("Processo " + currentPid + " criado\n");
+                        System.out.printf("Processo %d criado %n".formatted(currentPid));
                     }
                 }
 
                 try {
                     Thread.sleep(CREATE_INTERVAL);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                } catch (InterruptedException ignored) {}
             }
         }).start();
     }
@@ -43,9 +42,7 @@ public class ProcessManager {
             while (true) {
                 try {
                     Thread.sleep(INACTIVE_INTERVAL);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                } catch (InterruptedException ignored) {}
 
                 synchronized (lock) {
                     if (!activeProcesses.isEmpty()) {
@@ -65,16 +62,11 @@ public class ProcessManager {
             while (true) {
                 try {
                     Thread.sleep(INACTIVE_COORDINATOR_INTERVAL);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                } catch (InterruptedException ignored) {}
 
                 synchronized (lock) {
-                    var coordinators = activeProcesses.stream()
-                            .filter(Process::isCoordinator)
-                            .toList();
-                    if (!coordinators.isEmpty()) {
-                        final Process coordinator = coordinators.getFirst();
+                    var coordinator = getCoordinatorProcess();
+                    if (coordinator != null) {
                         activeProcesses.remove(coordinator);
                         System.out.println(coordinator + " inativado");
                     }
@@ -83,8 +75,40 @@ public class ProcessManager {
         }).start();
     }
 
+    public void doRequests() {
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(REQUEST_INTERVAL);
+                } catch (InterruptedException ignored) {}
+
+                synchronized (lock) {
+                    if (!activeProcesses.isEmpty()) {
+                        var coordinator = getCoordinatorProcess();
+                        if (coordinator != null)
+                            /* imagine um processamento qualquer aqui */
+                            System.out.printf("Requisição realizada pelo Processo %d (Coordenador) %n", coordinator.getPid());
+
+                        else new RingElection().doElection();
+                    }
+                }
+            }
+        });
+    }
+
     private Process getRandomProcess() {
         final int randomIndex = random.nextInt(activeProcesses.size());
         return activeProcesses.get(randomIndex);
+    }
+
+    private Process getCoordinatorProcess() {
+        var coordinator = activeProcesses.stream()
+                .filter(Process::isCoordinator)
+                .toList();
+        try {
+            return coordinator.getFirst();
+        } catch (NoSuchElementException _) {
+            return null;
+        }
     }
 }

@@ -8,5 +8,6 @@ public class Main {
         pm.createProcess();
         pm.inactiveProcess();
         pm.inactiveCoordinator();
+        pm.doRequests();
     }
 }
