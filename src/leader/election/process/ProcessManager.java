@@ -1,8 +1,11 @@
 package leader.election.process;
 
-import leader.election.ring.RingElection;
+import leader.election.IElection;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Random;
 
 public class ProcessManager {
     private static int currentPid = 0;
@@ -11,7 +14,7 @@ public class ProcessManager {
     private static final int INACTIVE_INTERVAL = 8000;
     private static final int INACTIVE_COORDINATOR_INTERVAL = 10000;
 
-    public static final List<Process> activeProcesses =  new ArrayList<>();
+    private static final List<Process> activeProcesses =  new ArrayList<>();
 
     private final Object lock = new Object();
     private final Random random = new Random();
@@ -49,7 +52,7 @@ public class ProcessManager {
                         final Process process = getRandomProcess();
                         if (!process.isCoordinator()) {
                             activeProcesses.remove(process);
-                            System.out.println("Process " + process.getPid() + " inativado");
+                            System.out.println("Processo " + process.getPid() + " inativado");
                         }
                     }
                 }
@@ -75,7 +78,7 @@ public class ProcessManager {
         }).start();
     }
 
-    public void doRequests() {
+    public void doRequests(IElection election) {
         new Thread(() -> {
             while (true) {
                 try {
@@ -88,12 +91,17 @@ public class ProcessManager {
                         if (coordinator != null)
                             /* imagine um processamento qualquer aqui */
                             System.out.printf("Requisição realizada pelo Processo %d (Coordenador) %n", coordinator.getPid());
+                        else {
+                            var newCoordinator = election.doElection(activeProcesses);
+                            setCoordinatorProcess(newCoordinator);
 
-                        else new RingElection().doElection();
+                            /* imagine um processamento qualquer aqui */
+                            System.out.printf("Requisição realizada pelo Processo %d (Coordenador) %n", newCoordinator.getPid());
+                        }
                     }
                 }
             }
-        });
+        }).start();
     }
 
     private Process getRandomProcess() {
@@ -110,5 +118,13 @@ public class ProcessManager {
         } catch (NoSuchElementException _) {
             return null;
         }
+    }
+
+    private void setCoordinatorProcess(Process process) {
+        activeProcesses.stream()
+                .filter(p -> p.getPid() == process.getPid())
+                .toList()
+                .getFirst()
+            .setCoordinator(true);
     }
 }
