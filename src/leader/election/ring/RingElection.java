@@ -11,6 +11,7 @@ public class RingElection implements IElection {
     private final LinkedList<Integer> pidList = new LinkedList<>();
 
     public Process doElection(List<Process> activeProcesses) {
+        pidList.clear();
 
         // Percorre a lista de processos ativos para avaliar quais são aptos à eleição
         activeProcesses.forEach(process -> consultProcess(process.getPid()));
