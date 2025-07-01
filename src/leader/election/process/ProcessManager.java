@@ -87,17 +87,22 @@ public class ProcessManager {
 
                 synchronized (lock) {
                     if (!activeProcesses.isEmpty()) {
-                        var coordinator = getCoordinatorProcess();
-                        if (coordinator != null)
-                            /* imagine um processamento qualquer aqui */
-                            System.out.printf("Requisição realizada pelo Processo %d (Coordenador) %n", coordinator.getPid());
-                        else {
+                        var process = getRandomProcess();
+                        int result = process.doRequest();
+
+                        if (result == -1) {
+                            System.out.printf("Ring Election iniciada pelo processo %d %n", process.getPid());
+
                             var newCoordinator = election.doElection(activeProcesses);
                             setCoordinatorProcess(newCoordinator);
 
-                            /* imagine um processamento qualquer aqui */
-                            System.out.printf("Requisição realizada pelo Processo %d (Coordenador) %n", newCoordinator.getPid());
+                            System.out.printf("Ring Election finalizada, novo Coordenador é: %d %n", newCoordinator.getPid());
+
+                            process.doRequest();
+                            System.out.printf("Requisição solicitada pelo processo %d e realizada pelo Processo %d (Coordenador) %n", process.getPid(), newCoordinator.getPid());
                         }
+
+                        System.out.printf("Requisição solicitada pelo processo %d e realizada pelo Processo %d (Coordenador) %n", process.getPid(), getCoordinatorProcess().getPid());
                     }
                 }
             }
@@ -109,7 +114,7 @@ public class ProcessManager {
         return activeProcesses.get(randomIndex);
     }
 
-    private Process getCoordinatorProcess() {
+    public static Process getCoordinatorProcess() {
         var coordinator = activeProcesses.stream()
                 .filter(Process::isCoordinator)
                 .toList();

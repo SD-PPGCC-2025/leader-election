@@ -26,6 +26,23 @@ public class Process {
         this.isCoordinator = isCoordinator;
     }
 
+    public int doRequest() {
+        if (isCoordinator) return 0;
+
+        var coordinator = ProcessManager.getCoordinatorProcess();
+        if (coordinator == null) return -1;
+
+        coordinator.processRequest();
+        return 0;
+    }
+
+    private void processRequest() {
+        if (!isCoordinator) return;
+
+        /* imagine o coordenador processando a solicitação aqui */
+
+    }
+
     @Override
     public String toString() {
         return "Processo " + pid + (isCoordinator ? " (Coordenador)" : "");
